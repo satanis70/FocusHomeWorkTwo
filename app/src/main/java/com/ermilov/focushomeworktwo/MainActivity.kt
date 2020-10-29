@@ -18,6 +18,7 @@ class MainActivity : AppCompatActivity() {
         super.onStart()
         button_increase.setOnClickListener {
             speedometrview.onSpeedChanged(speedometrview.getCurrentSpeed()+10)
+            speedometrview.setAnimation()
         }
         button_decrease.setOnClickListener {
             speedometrview.onSpeedChanged(speedometrview.getCurrentSpeed()-10)

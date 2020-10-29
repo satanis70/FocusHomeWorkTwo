@@ -2,10 +2,9 @@
 <resources>
     <declare-styleable name="speedometr_attributies">
         <attr name="android:textSize" format="dimension"/>
+        <attr name="android:text" format="string"/>
         <attr name="currentSpeed" format="float" />
-        <attr name="onColor" format="color" />
-        <attr name="offColor" format="color" />
-        <attr name="scaleColor" format="color" />
+        <attr name="markRange" format="integer"/>
     </declare-styleable>
 
 

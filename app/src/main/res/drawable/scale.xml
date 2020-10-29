@@ -7,12 +7,12 @@
         android:topRightRadius="500dp" />
 
     <solid
-        android:color="#FFFFFFFF">
+        android:color="#EDB4B4">
     </solid>
 
     <size
-        android:width="160dp"
-        android:height="80dp" />
+        android:width="320dp"
+        android:height="160dp" />
 
     <padding
         android:bottom="8dp"

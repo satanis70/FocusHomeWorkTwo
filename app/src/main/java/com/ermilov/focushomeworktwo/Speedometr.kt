@@ -1,105 +1,49 @@
 package com.ermilov.focushomeworktwo
 
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
+import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.Paint
 import android.os.Build
 import android.util.AttributeSet
-import android.view.Gravity
-import android.view.LayoutInflater
-import android.widget.LinearLayout
+import android.view.View
 import androidx.annotation.RequiresApi
-import kotlinx.android.synthetic.main.speedometr.view.*
+import kotlinx.android.synthetic.main.activity_main.view.*
+import kotlin.math.cos
+import kotlin.math.round
+import kotlin.math.sin
 
 
 @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
 class Speedometr @JvmOverloads constructor(
-
     context: Context,
     attrs: AttributeSet? = null,
     defStyle: Int = 0,
     defStyleRes: Int = 0
-) : LinearLayout(context, attrs, defStyle, defStyleRes), SpeedChangeListener {
-
-    private var textSize: Float = 30f
+) : View(context, attrs, defStyle, defStyleRes), SpeedChangeListener {
+    private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
     private var mCurrentSpeed = 0f
-    private var onMarkPaint: Paint? = null
-    private var offMarkPaint: Paint? = null
-    private var scalePaint: Paint? = null
-    private var readingPaint: Paint? = null
-    private var onPath: Path? = null
-    private var offPath: Path? = null
-    val oval = RectF()
-
-    private var ON_COLOR: Int = android.graphics.Color.argb(255, 0xff, 0xA5, 0x00)
-    private var OFF_COLOR: Int = android.graphics.Color.argb(255, 0x3e, 0x3e, 0x3e)
-    private var SCALE_COLOR: Int = android.graphics.Color.argb(255, 255, 255, 255)
-    private val SCALE_SIZE = 14f
-    private val READING_SIZE = 60f
-
-    private var centerX = 0f
-    private var centerY = 0f
-    private val radius = 0f
+    private var text = "km/h"
+    private var markRange = 10
+    var colorArrow = Color.WHITE
 
     init {
-            LayoutInflater.from(context).inflate(R.layout.speedometr, this, true)
-            attrs?.let {
-                val typeArray = context.obtainStyledAttributes(
-                    it, R.styleable.speedometr_attributies, 0, 0
-                )
+        val typedArray = context.obtainStyledAttributes(
+            attrs,
+            R.styleable.speedometr_attributies,
+            defStyle,
+            defStyleRes
+        )
 
-                ON_COLOR = typeArray.getColor(
-                    R.styleable.speedometr_attributies_onColor, ON_COLOR)
-                OFF_COLOR = typeArray.getColor(
-                    R.styleable.speedometr_attributies_offColor,
-                    OFF_COLOR
-                )
-                SCALE_COLOR = typeArray.getColor(
-                    R.styleable.speedometr_attributies_scaleColor,
-                    SCALE_COLOR
-                )
+        val char = typedArray.getText(R.styleable.speedometr_attributies_android_text)
+        text = char?.toString() ?: "km/h"
 
-
-
-
-                textSize = typeArray.getDimensionPixelSize(
-                    R.styleable.speedometr_attributies_android_textSize,
-                    textSize.toInt()
-                ).toFloat()
-
-                speed_tex_view.textSize = textSize
-                speed_tex_view.gravity = Gravity.CENTER
-                typeArray.recycle()
-                initDrawingTools()
-
-            }
-        }
-
-    private fun initDrawingTools() {
-        onMarkPaint = Paint()
-        onMarkPaint?.setStyle(Paint.Style.STROKE)
-        onMarkPaint?.setColor(ON_COLOR)
-        onMarkPaint?.setStrokeWidth(35f)
-        onMarkPaint?.setShadowLayer(5f, 0f, 0f, ON_COLOR)
-        onMarkPaint?.setAntiAlias(true)
-        offMarkPaint = Paint(onMarkPaint)
-        offMarkPaint?.setColor(OFF_COLOR)
-        offMarkPaint?.setStyle(Paint.Style.FILL_AND_STROKE)
-        offMarkPaint?.setShadowLayer(0f, 0f, 0f, OFF_COLOR)
-        scalePaint = Paint(offMarkPaint)
-        scalePaint?.setStrokeWidth(2f)
-        scalePaint?.setTextSize(SCALE_SIZE)
-        scalePaint?.setShadowLayer(5f, 0f, 0f, Color.RED)
-        scalePaint?.setColor(SCALE_COLOR)
-        readingPaint = Paint(scalePaint)
-        readingPaint?.setStyle(Paint.Style.FILL_AND_STROKE)
-        offMarkPaint?.setShadowLayer(3f, 0f, 0f, Color.WHITE)
-        readingPaint?.setTextSize(65f)
-        readingPaint?.setTypeface(Typeface.SANS_SERIF)
-        readingPaint?.setColor(Color.WHITE)
-        onPath = Path()
-        offPath = Path()
+        markRange = typedArray.getInt(R.styleable.speedometr_attributies_markRange, 10)
+        typedArray.recycle()
     }
-
 
 
     fun getCurrentSpeed(): Float {
@@ -111,8 +55,8 @@ class Speedometr @JvmOverloads constructor(
             mCurrentSpeed < 0 -> {
                 this.mCurrentSpeed = 0f
             }
-            mCurrentSpeed > 280 -> {
-                this.mCurrentSpeed = 280f
+            mCurrentSpeed > 120 -> {
+                this.mCurrentSpeed = 120f
             }
             else -> this.mCurrentSpeed = mCurrentSpeed
         }
@@ -121,31 +65,139 @@ class Speedometr @JvmOverloads constructor(
 
     override fun onSpeedChanged(newSpeedValue: Float) {
         this.setCurrentSpeed(newSpeedValue)
-        speed_tex_view.text = getCurrentSpeed().toString()
+        this.invalidate()
     }
 
     override fun onDraw(canvas: Canvas?) {
-        drawScaleBackGround(canvas)
-        drawScale(canvas)
-    }
+        super.onDraw(canvas)
 
-    fun drawScaleBackGround(canvas: Canvas?){
-        offPath?.reset();
-            var i = -180
-            while (i < 0) {
-                offPath?.addArc(oval, i.toFloat(), 2f)
-                i += 4
-            }
-            canvas?.drawPath(offPath!!, offMarkPaint!!)
-    }
-
-    private fun drawScale(canvas: Canvas?) {
-        onPath?.reset()
-        var i = -180
-        while (i < mCurrentSpeed / 280 * 180 - 180) {
-            onPath!!.addArc(oval, i.toFloat(), 2f)
-            i += 4
+        var width = width
+        var height = height
+        val aspect = width/height
+        val normalAspect = 2f/1f
+        val textPadding = 0.85f
+        val longScale = 0.9f
+        if (aspect>normalAspect){
+            width = (normalAspect * height).toInt()
+        } else if (aspect<normalAspect) {
+            height = (width/normalAspect).toInt()
         }
-        canvas?.drawPath(onPath!!, onMarkPaint!!)
+
+
+        canvas?.save()
+
+        canvas?.scale(.5f * width, -1f * height)
+        canvas?.translate(1f, -1f)
+        paint.color = Color.parseColor("#808080")
+        paint.style = Paint.Style.FILL
+        canvas?.drawCircle(0f, 0f, 1f, paint)
+
+        paint.color = Color.WHITE
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 0.005f
+
+        val maxValue = 120
+        val scale = 0.9f
+        val step = Math.PI / maxValue
+        for (i in 0..maxValue){
+            val x1 = cos(Math.PI - step * i)
+            val y1 = sin(Math.PI - step * i)
+            val x2 : Float
+            val y2 : Float
+            if (i % markRange == 0){
+                x2 = (x1*scale*0.9f).toFloat()
+                y2 = (y1*scale*0.9f).toFloat()
+            } else {
+                 x2 = (x1*scale).toFloat()
+                 y2 = (y1*scale).toFloat()
+            }
+
+            canvas?.drawLine(x1.toFloat(), y1.toFloat(), x2, y2, paint)
+        }
+
+        canvas?.restore()
+        canvas?.save()
+
+        canvas?.translate((width / 2).toFloat(), 0f)
+
+        paint.textSize = (height/10).toFloat()
+        paint.color = Color.RED
+        paint.style = Paint.Style.FILL
+
+        val factor: Float = height * scale * longScale * textPadding
+
+        var i = 0
+        while (i <= maxValue) {
+            val x = cos(Math.PI - step * i).toFloat() * factor
+            val y = sin(Math.PI - step * i).toFloat() * factor
+            val text = i.toString()
+            val textLen = round(paint.measureText(text))
+            canvas!!.drawText(i.toString(), x - textLen / 2, height - y, paint)
+            i += markRange
+        }
+
+
+        canvas!!.drawText(text, -paint.measureText(text) / 2, height - height * 0.15f, paint)
+
+        canvas.restore()
+        canvas.save()
+
+        canvas.translate((width / 2).toFloat(), height.toFloat())
+        canvas.scale(.5f * width, -1f * height)
+        canvas.rotate(90 - 180f * (getCurrentSpeed() / maxValue.toFloat()))
+
+        paint.color = Color.WHITE
+        paint.strokeWidth = 0.02f
+        canvas.drawLine(0.01f, 0f, 0f, 1f, paint)
+        canvas.drawLine(-0.01f, 0f, 0f, 1f, paint)
+
+        paint.style = Paint.Style.FILL
+        paint.color = Color.parseColor("#ff8080")
+        canvas.drawCircle(0f, 0f, .05f, paint)
+
+        canvas.restore()
+
     }
+
+
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        val widthMode = MeasureSpec.getMode(widthMeasureSpec)
+        var width = MeasureSpec.getSize(widthMeasureSpec)
+
+        val heigthMode = MeasureSpec.getMode(widthMeasureSpec)
+        var height = MeasureSpec.getSize(widthMeasureSpec)
+
+        val aspect = width/height
+        val normalAspect = 2f/1f
+
+        if (aspect>normalAspect){
+            if (widthMode != MeasureSpec.EXACTLY){
+                width = round(normalAspect * height).toInt()
+            }
+        } else {
+            if (heigthMode != MeasureSpec.EXACTLY){
+                height = round(width / normalAspect).toInt()
+            }
+        }
+
+        setMeasuredDimension(width, height)
+    }
+
+    @SuppressLint("NewApi")
+    fun setAnimation(){
+        val anim = ValueAnimator()
+        anim.setIntValues(Color.YELLOW, Color.RED)
+        anim.setEvaluator(ArgbEvaluator())
+        anim.addUpdateListener {
+                //valueAnimator -> speedometrview.setBackgroundColor(valueAnimator.animatedValue as Int)
+                valueAnimator -> paint.
+        }
+
+        anim.duration = 300
+        anim.start()
+    }
+
+
+
 }
