@@ -20,9 +20,10 @@
         android:id="@+id/button_decrease"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
+        android:layout_marginStart="92dp"
         android:layout_marginTop="44dp"
         android:text="Decrease"
-        app:layout_constraintEnd_toEndOf="@+id/speedometrview"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/speedometrview">
 
     </Button>
@@ -33,7 +34,9 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="44dp"
         android:text="Increase"
-        app:layout_constraintStart_toStartOf="@+id/speedometrview"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintHorizontal_bias="0.333"
+        app:layout_constraintStart_toEndOf="@+id/button_decrease"
         app:layout_constraintTop_toBottomOf="@+id/speedometrview" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
