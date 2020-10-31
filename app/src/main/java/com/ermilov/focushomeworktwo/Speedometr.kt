@@ -2,6 +2,7 @@ package com.ermilov.focushomeworktwo
 
 import android.animation.ArgbEvaluator
 import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -9,6 +10,7 @@ import android.graphics.Paint
 import android.os.Build
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.AccelerateDecelerateInterpolator
 import android.view.animation.LinearInterpolator
 import androidx.annotation.RequiresApi
 import kotlin.math.cos
@@ -24,9 +26,12 @@ class Speedometr @JvmOverloads constructor(
     defStyleRes: Int = 0
 ) : View(context, attrs, defStyle, defStyleRes), SpeedChangeListener {
     private val paint = Paint(Paint.ANTI_ALIAS_FLAG)
-    private var mCurrentSpeed = 0f
+    private var mCurrentSpeed = 0
     private var text = "km/h"
     private var markRange = 10
+    private var colorArrow = Color.YELLOW
+    private val maxValue = 120
+    private var angle = convertSpeedtoDegrees(mCurrentSpeed)
     init {
         val typedArray = context.obtainStyledAttributes(
             attrs,
@@ -43,29 +48,60 @@ class Speedometr @JvmOverloads constructor(
     }
 
 
-    fun getCurrentSpeed(): Float {
+
+    fun getCurrentSpeed(): Int {
 
         return mCurrentSpeed
     }
 
-    fun setCurrentSpeed(mCurrentSpeed: Float) {
+    fun setCurrentSpeed(mCurrentSpeed: Int) {
         when {
             mCurrentSpeed < 0 -> {
-                this.mCurrentSpeed = 0f
+                this.mCurrentSpeed = 0
 
             }
             mCurrentSpeed > 120 -> {
-                this.mCurrentSpeed = 120f
+                this.mCurrentSpeed = 120
             }
             else -> this.mCurrentSpeed = mCurrentSpeed
         }
     }
 
 
-    override fun onSpeedChanged(newSpeedValue: Float) {
+    override fun onSpeedChanged(newSpeedValue: Int) {
         this.setCurrentSpeed(newSpeedValue)
-
         this.invalidate()
+        if(newSpeedValue in 0..maxValue){
+            ValueAnimator.ofInt(mCurrentSpeed, newSpeedValue).apply {
+                duration = ((newSpeedValue-mCurrentSpeed)*markRange).toLong()
+                interpolator = AccelerateDecelerateInterpolator()
+                addUpdateListener {
+                    angle = convertSpeedtoDegrees(this.animatedValue as Int)
+                    val fraction = 1-(maxValue-this.animatedValue as Int)/100f
+                    colorArrow = if((animatedValue as Int) in 20..maxValue) {
+                        ArgbEvaluator().evaluate(
+                                fraction,
+                                Color.YELLOW,
+                                Color.RED,
+                        ) as Int
+                    } else
+                        Color.YELLOW
+                    invalidate()
+                    }
+                    start()
+                }
+            }
+        }
+
+
+    private fun convertSpeedtoDegrees(speed: Int): Int{
+        var angle = 0
+        if(speed in 0..80){
+            angle = speed + 109
+        } else if(speed in 80..120){
+            angle = speed-251
+        }
+        return angle
     }
 
 
@@ -98,7 +134,7 @@ class Speedometr @JvmOverloads constructor(
         paint.style = Paint.Style.STROKE
         paint.strokeWidth = 0.005f
 
-        val maxValue = 120
+
         val scale = 0.9f
         val step = Math.PI / maxValue
         for (i in 0..maxValue){
@@ -130,7 +166,7 @@ class Speedometr @JvmOverloads constructor(
 
         var i = 0
         while (i <= maxValue) {
-            paint.color = Color.YELLOW
+            paint.color = colorArrow
             val x = cos(Math.PI - step * i).toFloat() * factor
             val y = sin(Math.PI - step * i).toFloat() * factor
             val text = i.toString()
@@ -150,9 +186,7 @@ class Speedometr @JvmOverloads constructor(
         canvas.rotate(90 - 180f * (getCurrentSpeed() / maxValue.toFloat()))
 
 
-        paint.color = Color.RED
         drawArrow(canvas)
-
         paint.style = Paint.Style.FILL
         paint.color = Color.parseColor("#ff8080")
         canvas.drawCircle(0f, 0f, .05f, paint)
@@ -177,11 +211,10 @@ class Speedometr @JvmOverloads constructor(
     }
     fun drawArrow(canvas: Canvas?){
         paint.style = Paint.Style.FILL_AND_STROKE
-        setAnimation()
+        paint.color = colorArrow
         paint.strokeWidth = 0.02f
         canvas?.drawLine(0.01f, 0f, 0f, 1f, paint)
         canvas?.drawLine(-0.01f, 0f, 0f, 1f, paint)
-
     }
 
 
