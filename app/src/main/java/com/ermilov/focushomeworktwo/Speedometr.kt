@@ -1,8 +1,7 @@
 package com.ermilov.focushomeworktwo
 
 import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
-import android.annotation.SuppressLint
+import android.animation.ObjectAnimator
 import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
@@ -10,8 +9,8 @@ import android.graphics.Paint
 import android.os.Build
 import android.util.AttributeSet
 import android.view.View
+import android.view.animation.LinearInterpolator
 import androidx.annotation.RequiresApi
-import kotlinx.android.synthetic.main.activity_main.view.*
 import kotlin.math.cos
 import kotlin.math.round
 import kotlin.math.sin
@@ -28,8 +27,6 @@ class Speedometr @JvmOverloads constructor(
     private var mCurrentSpeed = 0f
     private var text = "km/h"
     private var markRange = 10
-    var colorArrow = Color.WHITE
-
     init {
         val typedArray = context.obtainStyledAttributes(
             attrs,
@@ -47,6 +44,7 @@ class Speedometr @JvmOverloads constructor(
 
 
     fun getCurrentSpeed(): Float {
+
         return mCurrentSpeed
     }
 
@@ -54,6 +52,7 @@ class Speedometr @JvmOverloads constructor(
         when {
             mCurrentSpeed < 0 -> {
                 this.mCurrentSpeed = 0f
+
             }
             mCurrentSpeed > 120 -> {
                 this.mCurrentSpeed = 120f
@@ -65,12 +64,16 @@ class Speedometr @JvmOverloads constructor(
 
     override fun onSpeedChanged(newSpeedValue: Float) {
         this.setCurrentSpeed(newSpeedValue)
+
         this.invalidate()
     }
 
+
+
+
+
     override fun onDraw(canvas: Canvas?) {
         super.onDraw(canvas)
-
         var width = width
         var height = height
         val aspect = width/height
@@ -82,7 +85,6 @@ class Speedometr @JvmOverloads constructor(
         } else if (aspect<normalAspect) {
             height = (width/normalAspect).toInt()
         }
-
 
         canvas?.save()
 
@@ -121,13 +123,14 @@ class Speedometr @JvmOverloads constructor(
         canvas?.translate((width / 2).toFloat(), 0f)
 
         paint.textSize = (height/10).toFloat()
-        paint.color = Color.RED
+        paint.color = Color.LTGRAY
         paint.style = Paint.Style.FILL
 
         val factor: Float = height * scale * longScale * textPadding
 
         var i = 0
         while (i <= maxValue) {
+            paint.color = Color.YELLOW
             val x = cos(Math.PI - step * i).toFloat() * factor
             val y = sin(Math.PI - step * i).toFloat() * factor
             val text = i.toString()
@@ -146,16 +149,38 @@ class Speedometr @JvmOverloads constructor(
         canvas.scale(.5f * width, -1f * height)
         canvas.rotate(90 - 180f * (getCurrentSpeed() / maxValue.toFloat()))
 
-        paint.color = Color.WHITE
-        paint.strokeWidth = 0.02f
-        canvas.drawLine(0.01f, 0f, 0f, 1f, paint)
-        canvas.drawLine(-0.01f, 0f, 0f, 1f, paint)
+
+        paint.color = Color.RED
+        drawArrow(canvas)
 
         paint.style = Paint.Style.FILL
         paint.color = Color.parseColor("#ff8080")
         canvas.drawCircle(0f, 0f, .05f, paint)
-
         canvas.restore()
+
+    }
+
+
+    fun setAnimation() {
+        val colorTo = Color.RED
+        val colorFrom = Color.YELLOW
+        val objectAnimator = ObjectAnimator.ofObject(paint, "color", ArgbEvaluator(), colorFrom, colorTo)
+        objectAnimator.interpolator = LinearInterpolator()
+        objectAnimator.duration = getCurrentSpeed().toLong()
+        objectAnimator.addUpdateListener {
+            //speedometrview.setBackgroundColor(objectAnimator.animatedValue as Int)
+            paint.color = objectAnimator.animatedValue as Int
+            invalidate()
+        }
+
+
+    }
+    fun drawArrow(canvas: Canvas?){
+        paint.style = Paint.Style.FILL_AND_STROKE
+        setAnimation()
+        paint.strokeWidth = 0.02f
+        canvas?.drawLine(0.01f, 0f, 0f, 1f, paint)
+        canvas?.drawLine(-0.01f, 0f, 0f, 1f, paint)
 
     }
 
@@ -182,20 +207,6 @@ class Speedometr @JvmOverloads constructor(
         }
 
         setMeasuredDimension(width, height)
-    }
-
-    @SuppressLint("NewApi")
-    fun setAnimation(){
-        val anim = ValueAnimator()
-        anim.setIntValues(Color.YELLOW, Color.RED)
-        anim.setEvaluator(ArgbEvaluator())
-        anim.addUpdateListener {
-                //valueAnimator -> speedometrview.setBackgroundColor(valueAnimator.animatedValue as Int)
-                valueAnimator -> paint.
-        }
-
-        anim.duration = 300
-        anim.start()
     }
 
 
